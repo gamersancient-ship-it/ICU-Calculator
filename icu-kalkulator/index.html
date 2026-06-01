@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ICU Kalk">
+<meta name="theme-color" content="#0A2540">
+<title>ICU Lab Kalkulator</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192x192.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A2540;--bg2:#0F3060;--bg3:#112A4A;--surface:#142D52;--surface2:#1A375E;
+  --teal:#00D4AA;--teal2:#00B891;--tealfade:rgba(0,212,170,.12);
+  --amber:#F5A623;--red:#FF5F5F;--red2:#E03E3E;--green:#36D399;
+  --text:#E8F4FD;--text2:#8BAACC;--text3:#4D7499;
+  --border:rgba(0,212,170,.15);--border2:rgba(0,212,170,.25);
+  --radius:14px;--radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;overflow:hidden}
+body{display:flex;flex-direction:column}
+
+/* TOP BAR */
+.topbar{background:var(--bg);border-bottom:1px solid var(--border);padding:14px 16px 10px;flex-shrink:0;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+.topbar-icon{width:34px;height:34px;background:var(--tealfade);border:1px solid var(--border2);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.topbar-icon svg{width:18px;height:18px}
+.topbar-title{font-size:17px;font-weight:600;color:var(--teal);letter-spacing:-.3px}
+.topbar-sub{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace}
+
+/* NAV TABS */
+.nav{display:flex;overflow-x:auto;gap:4px;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav-btn{flex-shrink:0;padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap}
+.nav-btn.active{background:var(--tealfade);border-color:var(--teal);color:var(--teal)}
+
+/* MAIN SCROLL */
+.main{flex:1;overflow-y:auto;padding:14px 16px 80px;scrollbar-width:none}
+.main::-webkit-scrollbar{display:none}
+
+.panel{display:none}.panel.active{display:block}
+
+/* SUB TABS */
+.sub-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.sub-btn{padding:5px 12px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .2s}
+.sub-btn.active{background:rgba(245,166,35,.1);border-color:var(--amber);color:var(--amber)}
+
+/* FORM */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.field-row.single{grid-template-columns:1fr}
+.field{display:flex;flex-direction:column;gap:5px}
+label{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px}
+input[type=number],select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;padding:10px 12px;appearance:none;-webkit-appearance:none}
+input[type=number]:focus,select:focus{outline:none;border-color:var(--teal);background:var(--surface2)}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%238BAACC'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+
+/* CALC BTN */
+.calc-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#0A2540;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;border:none;border-radius:var(--radius-sm);cursor:pointer;margin-top:4px;transition:transform .15s,opacity .15s}
+.calc-btn:active{transform:scale(.98);opacity:.9}
+
+/* RESULT */
+.result{margin-top:12px;border-radius:var(--radius);overflow:hidden;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.result-header{padding:14px 16px 10px}
+.result-status{font-size:11px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.result-val{font-size:28px;font-weight:600;letter-spacing:-.5px}
+.result-label{font-size:13px;margin-top:2px;opacity:.8}
+.result-body{padding:10px 16px 14px}
+.result.ok{background:rgba(54,211,153,.08);border:1px solid rgba(54,211,153,.3)}
+.result.ok .result-status{color:var(--green)}
+.result.ok .result-val{color:var(--green)}
+.result.warn{background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.3)}
+.result.warn .result-status{color:var(--amber)}
+.result.warn .result-val{color:var(--amber)}
+.result.bad{background:rgba(255,95,95,.08);border:1px solid rgba(255,95,95,.3)}
+.result.bad .result-status{color:var(--red)}
+.result.bad .result-val{color:var(--red)}
+
+.reko{font-size:13px;line-height:1.65;color:var(--text2)}
+.reko b{color:var(--text);font-weight:500}
+.divline{height:1px;background:var(--border);margin:10px 0}
+.row-kv{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;gap:8px}
+.row-kv:last-child{border:none}
+.row-kv .k{color:var(--text3)}
+.row-kv .v{color:var(--text);text-align:right;flex-shrink:0}
+.row-kv .v.danger{color:var(--red)}
+.row-kv .v.warn{color:var(--amber)}
+.row-kv .v.ok{color:var(--green)}
+
+/* HINT */
+.hint{font-size:11.5px;color:var(--text3);line-height:1.6;margin-top:12px;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:var(--radius-sm);border-left:2px solid var(--border2)}
+.hint b{color:var(--teal)}
+
+/* SECTION TITLE */
+.sec-title{font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;font-family:'DM Mono',monospace}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#00D4AA" stroke-width="2.2" stroke-linecap="round">
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+      <circle cx="12" cy="12" r="4"/>
+    </svg>
+  </div>
+  <div>
+    <div class="topbar-title">ICU Lab Kalkulator</div>
+    <div class="topbar-sub">Koreksi · Guideline-Based · Offline</div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="switchTab('elek')">⚡ Elektrolit</button>
+  <button class="nav-btn" onclick="switchTab('agd')">🫁 AGD</button>
+  <button class="nav-btn" onclick="switchTab('hema')">🩸 Hematologi</button>
+  <button class="nav-btn" onclick="switchTab('ginjal')">🔬 Ginjal</button>
+  <button class="nav-btn" onclick="switchTab('gula')">🍬 Gula Darah</button>
+</div>
+
+<div class="main">
+
+<!-- ===== ELEKTROLIT ===== -->
+<div id="panel-elek" class="panel active">
+  <div class="sub-tabs">
+    <button class="sub-btn active" id="sb-na" onclick="switchSub('na')">Na</button>
+    <button class="sub-btn" id="sb-k" onclick="switchSub('k')">K</button>
+    <button class="sub-btn" id="sb-ca" onclick="switchSub('ca')">Ca</button>
+    <button class="sub-btn" id="sb-mg" onclick="switchSub('mg')">Mg</button>
+    <button class="sub-btn" id="sb-p" onclick="switchSub('p')">Fosfat</button>
+  </div>
+
+  <!-- Natrium -->
+  <div id="sp-na">
+    <div class="sec-title">Koreksi Natrium</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field"><label>Na Serum (mEq/L)</label><input type="number" id="na-v" value="125" step="0.1" inputmode="decimal"></div>
+        <div class="field"><label>BB (kg)</label><input type="number" id="na-bw" value="60" inputmode="decimal"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Na Target (mEq/L)</label><input type="number" id="na-tgt" value="135" step="0.1" inputmode="decimal"></div>
+        <div class="field"><label>Jenis Kelamin</label><select id="na-sex"><option value="0.6">Pria</option><option value="0.5">Wanita</option></select></div>
+      </div>
+      <button class="calc-btn" onclick="calcNa()">Hitung Koreksi</button>
+    </div>
+    <div id="r-na"></div>
+    <div class="hint">Normal Na: <b>135–145 mEq/L</b> · Koreksi hiponatremia max <b>8–10 mEq/L / 24 jam</b> (risiko ODS) · Hipernatremia: ≤0.5 mEq/L/jam</div>
+  </div>
+
+  <!-- Kalium -->
+  <div id="sp-k" style="display:none">
+    <div class="sec-title">Koreksi Kalium</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field"><label>K Serum (mEq/L)</label><input type="number" id="k-v" value="3.0" step="0.1" inputmode="decimal"></div>
+        <div class="field"><label>BB (kg)</label><input type="number" id="k-bw" value="60" inputmode="decimal"></div>
+      </div>
+      <button class="calc-btn" onclick="calcK()">Hitung Koreksi</button>
+    </div>
+    <div id="r-k"></div>
+    <div class="hint">Normal K: <b>3.5–5.0 mEq/L</b> · IV via CVC max <b>20 mEq/jam</b> · Via perifer ≤10 mEq/jam · Monitor EKG kontinu</div>
+  </div>
+
+  <!-- Kalsium -->
+  <div id="sp-ca" style="display:none">
+    <div class="sec-title">Kalsium Terkoreksi Albumin</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field"><label>Ca Total (mg/dL)</label><input type="number" id="ca-v" value="7.5" step="0.1" inputmode="decimal"></div>
+        <div class="field"><label>Albumin (g/dL)</label><input type="number" id="ca-alb" value="2.5" step="0.1" inputmode="decimal"></div>
+      </div>
+      <button class="calc-btn" onclick="calcCa()">Hitung Koreksi</button>
+    </div>
+    <div id="r-ca"></div>
+    <div class="hint">Rumus: Ca koreksi = Ca total + 0.8 × (4 − albumin) · Normal: <b>8.5–10.5 mg/dL</b> · Hipokalsemia berat: Ca glukonat 10% 10 mL IV</div>
+  </div>
+
+  <!-- Magnesium -->
+  <div id="sp-mg" style="display:none">
+    <div class="sec-title">Koreksi Magnesium</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field"><label>Mg Serum (mg/dL)</label><input type="number" id="mg-v" value="1.2" step="0.1" inputmode="decimal"></div>
+        <div class="field"><label>BB (kg)</label><input type="number" id="mg-bw" value="60" inputmode="decimal"></div>
+      </div>
+      <button class="calc-btn" onclick="calcMg()">Hitung Koreksi</button>
+    </div>
+    <div id="r-mg"></div>
+    <div class="hint">Normal Mg: <b>1.7–2.4 mg/dL</b> · Ringan: MgSO4 2 g IV/1 jam · Berat: 4–8 g IV/4–6 jam · Pantau refleks patela</div>
+  </div>
+
+  <!-- Fosfat -->
+  <div id="sp-p" style="display:none">
+    <div class="sec-title">Koreksi Fosfat</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field"><label>Fosfat (mg/dL)</label><input type="number" id="p-v" value="1.8" step="0.1" inputmode="decimal"></div>
+        <div class="field"><label>BB (kg)</label><input type="number" id="p-bw" value="60" inputmode="decimal"></div>
+      </div>
+      <button class="calc-btn" onclick="calcP()">Hitung Koreksi</button>
+    </div>
+    <div id="r-p"></div>
+    <div class="hint">Normal P: <b>2.5–4.5 mg/dL</b> · Berat (&lt;1.0): 0.32–0.64 mmol/kg IV · Max rate 7 mmol/jam</div>
+  </div>
+</div>
+
+<!-- ===== AGD ===== -->
+<div id="panel-agd" class="panel">
+  <div class="sec-title">Analisis Gas Darah Arteri</div>
+  <div class="card">
+    <div class="field-row">
+      <div class="field"><label>pH</label><input type="number" id="ph" value="7.30" step="0.01" inputmode="decimal"></div>
+      <div class="field"><label>PaCO₂ (mmHg)</label><input type="number" id="pco2" value="50" step="0.1" inputmode="decimal"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>HCO₃⁻ (mEq/L)</label><input type="number" id="hco3" value="24" step="0.1" inputmode="decimal"></div>
+      <div class="field"><label>Na (mEq/L)</label><input type="number" id="agd-na" value="140" step="0.1" inputmode="decimal"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Cl (mEq/L)</label><input type="number" id="agd-cl" value="104" step="0.1" inputmode="decimal"></div>
+      <div class="field"><label>Albumin (g/dL)</label><input type="number" id="agd-alb" value="4.0" step="0.1" inputmode="decimal"></div>
+    </div>
+    <button class="calc-btn" onclick="calcAGD()">Analisis AGD</button>
+  </div>
+  <div id="r-agd"></div>
+  <div class="hint">Gunakan nilai AGD arteri · Normal: pH 7.35–7.45, PaCO2 35–45, HCO3 22–26 · AG normal 8–12 mEq/L</div>
+</div>
+
+<!-- ===== HEMATOLOGI ===== -->
+<div id="panel-hema" class="panel">
+  <div class="sub-tabs">
+    <button class="sub-btn active" id="sb-hb" onclick="switchSubH('hb')">Transfusi Hb</button>
+    <button class="sub-btn" id="sb-plt" onclick="switchSubH('plt')">Trombosit</button>
+    <button class="sub-btn" id="sb-koag" onclick="switchSubH('koag')">Koagulasi</button>
+  </div>
+
+  <!-- Hb -->
+  <div id="sp-hb">
+    <div class="sec-title">Kebutuhan Transfusi PRC</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field"><label>Hb Saat Ini (g/dL)</label><input type="number" id="hb-v" value="7.5" step="0.1" inputmode="decimal"></div>
+        <div class="field"><label>Hb Target (g/dL)</label><input type="number" id="hb-tgt" value="10" step="0.1" inputmode="decimal"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>BB (kg)</label><input type="number" id="hb-bw" value="60" inputmode="decimal"></div>
+        <div class="field"><label>Kondisi Klinis</label><select id="hb-cond"><option value="0">Stabil / umum</option><option value="1">ACS / Jantung iskemik</option><option value="2">Sepsis berat</option></select></div>
+      </div>
+      <button class="calc-btn" onclick="calcHb()">Hitung Transfusi</button>
+    </div>
+    <div id="r-hb"></div>
+    <div class="hint">Target Hb ICU: <b>7–9 g/dL</b> (stabil), <b>8–10</b> (ACS/jantung) · 1 kantong PRC 250 mL ≈ naikkan Hb ~1 g/dL</div>
+  </div>
+
+  <!-- Trombosit -->
+  <div id="sp-plt" style="display:none">
+    <div class="sec-title">Evaluasi Transfusi Trombosit</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field"><label>Trombosit (×10³/µL)</label><input type="number" id="plt-v" value="45" inputmode="numeric"></div>
+        <div class="field"><label>Kondisi</label><select id="plt-cond"><option value="0">ICU umum / perdarahan aktif</option><option value="1">Pra-prosedur / operasi</option><option value="2">Antikoagulan aktif</option><option value="3">Hematologi / onkologi</option></select></div>
+      </div>
+      <button class="calc-btn" onclick="calcPlt()">Evaluasi</button>
+    </div>
+    <div id="r-plt"></div>
+    <div class="hint">1 pool trombosit (5–6 unit) ≈ naik <b>30–60 × 10³/µL</b> · Threshold spontan bleed: 10 · Prosedur: 50</div>
+  </div>
+
+  <!-- Koagulasi -->
+  <div id="sp-koag" style="display:none">
+    <div class="sec-title">Evaluasi Koagulopati</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field"><label>PT/INR</label><input type="number" id="inr" value="2.5" step="0.1" inputmode="decimal"></div>
+        <div class="field"><label>aPTT (detik)</label><input type="number" id="aptt" value="55" inputmode="numeric"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Fibrinogen (mg/dL)</label><input type="number" id="fib" value="150" inputmode="numeric"></div>
+        <div class="field"><label>Kondisi Klinis</label><select id="koag-cond"><option value="0">Perdarahan aktif</option><option value="1">Pra-prosedur invasif</option><option value="2">Tanpa perdarahan</option></select></div>
+      </div>
+      <button class="calc-btn" onclick="calcKoag()">Evaluasi Koagulasi</button>
+    </div>
+    <div id="r-koag"></div>
+  </div>
+</div>
+
+<!-- ===== GINJAL ===== -->
+<div id="panel-ginjal" class="panel">
+  <div class="sec-title">Fungsi Ginjal & AKI</div>
+  <div class="card">
+    <div class="field-row">
+      <div class="field"><label>Kreatinin (mg/dL)</label><input type="number" id="cr" value="1.8" step="0.01" inputmode="decimal"></div>
+      <div class="field"><label>Usia (tahun)</label><input type="number" id="cr-age" value="55" inputmode="numeric"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>BB (kg)</label><input type="number" id="cr-bw" value="60" inputmode="decimal"></div>
+      <div class="field"><label>Jenis Kelamin</label><select id="cr-sex"><option value="male">Pria</option><option value="female">Wanita</option></select></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>BUN (mg/dL)</label><input type="number" id="bun" value="28" step="0.1" inputmode="decimal"></div>
+      <div class="field"><label>Urin Output/24 jam (mL)</label><input type="number" id="uo" value="800" inputmode="numeric"></div>
+    </div>
+    <button class="calc-btn" onclick="calcGFR()">Hitung eGFR & AKI</button>
+  </div>
+  <div id="r-gfr"></div>
+  <div class="hint">Rumus Cockcroft-Gault · AKI KDIGO: Cr naik ≥0.3 mg/dL/48 jam, atau ≥1.5× baseline/7 hari, atau UO &lt;0.5 mL/kg/jam ≥6 jam</div>
+</div>
+
+<!-- ===== GULA DARAH ===== -->
+<div id="panel-gula" class="panel">
+  <div class="sub-tabs">
+    <button class="sub-btn active" id="sb-gd" onclick="switchSubG('gd')">Gula Darah</button>
+    <button class="sub-btn" id="sb-ag" onclick="switchSubG('ag')">Anion Gap</button>
+  </div>
+
+  <!-- GD -->
+  <div id="sp-gd">
+    <div class="sec-title">Protokol Insulin ICU</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field"><label>Gula Darah (mg/dL)</label><input type="number" id="gd" value="280" inputmode="numeric"></div>
+        <div class="field"><label>BB (kg)</label><input type="number" id="gd-bw" value="60" inputmode="decimal"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Protokol ICU</label><select id="gd-prot"><option value="0">Umum (target 140–180)</option><option value="1">Bedah/CABG (110–180)</option><option value="2">Neurokritis (140–180)</option></select></div>
+        <div class="field"><label>Status Nutrisi</label><select id="gd-feed"><option value="0">NPO / puasa</option><option value="1">Nutrisi enteral</option><option value="2">Nutrisi parenteral</option></select></div>
+      </div>
+      <button class="calc-btn" onclick="calcGD()">Hitung Koreksi</button>
+    </div>
+    <div id="r-gd"></div>
+    <div class="hint">NICE-SUGAR: target GD ICU <b>140–180 mg/dL</b> · Cek GD setiap 1–2 jam saat titrasi · Target ketat (&lt;110) meningkatkan risiko hipoglikemia</div>
+  </div>
+
+  <!-- AG -->
+  <div id="sp-ag" style="display:none">
+    <div class="sec-title">Anion Gap Terkoreksi</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field"><label>Na (mEq/L)</label><input type="number" id="ag-na" value="140" step="0.1" inputmode="decimal"></div>
+        <div class="field"><label>Cl (mEq/L)</label><input type="number" id="ag-cl" value="104" step="0.1" inputmode="decimal"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>HCO₃⁻ (mEq/L)</label><input type="number" id="ag-hco3" value="24" step="0.1" inputmode="decimal"></div>
+        <div class="field"><label>Albumin (g/dL)</label><input type="number" id="ag-alb" value="4.0" step="0.1" inputmode="decimal"></div>
+      </div>
+      <button class="calc-btn" onclick="calcAG()">Hitung AG</button>
+    </div>
+    <div id="r-ag"></div>
+    <div class="hint">AG normal 8–12 mEq/L · Koreksi albumin: +2.5 per 1 g/dL penurunan · MUDPILES jika AG tinggi</div>
+  </div>
+</div>
+
+</div><!-- end main -->
+
+<script>
+// NAV
+function switchTab(name){
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>{b.classList.remove('active')});
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const tabs=['elek','agd','hema','ginjal','gula'];
+  document.querySelectorAll('.nav-btn')[tabs.indexOf(name)].classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+}
+function switchSub(s){
+  ['na','k','ca','mg','p'].forEach(x=>{
+    document.getElementById('sp-'+x).style.display='none';
+    document.getElementById('sb-'+x).classList.remove('active');
+  });
+  document.getElementById('sp-'+s).style.display='';
+  document.getElementById('sb-'+s).classList.add('active');
+}
+function switchSubH(s){
+  ['hb','plt','koag'].forEach(x=>{
+    document.getElementById('sp-'+x).style.display='none';
+    document.getElementById('sb-'+x).classList.remove('active');
+  });
+  document.getElementById('sp-'+s).style.display='';
+  document.getElementById('sb-'+s).classList.add('active');
+}
+function switchSubG(s){
+  ['gd','ag'].forEach(x=>{
+    document.getElementById('sp-'+x).style.display='none';
+    document.getElementById('sb-'+x).classList.remove('active');
+  });
+  document.getElementById('sp-'+s).style.display='';
+  document.getElementById('sb-'+s).classList.add('active');
+}
+
+function g(id){return parseFloat(document.getElementById(id).value)||0;}
+function v(id){return document.getElementById(id).value;}
+
+function show(id, cls, val, label, status, rows, reko){
+  const el=document.getElementById(id);
+  let rowsHTML='';
+  if(rows&&rows.length){
+    rowsHTML='<div class="divline"></div>';
+    rows.forEach(r=>rowsHTML+=`<div class="row-kv"><span class="k">${r[0]}</span><span class="v ${r[2]||''}">${r[1]}</span></div>`);
+  }
+  el.innerHTML=`<div class="result ${cls}">
+    <div class="result-header">
+      <div class="result-status">${status}</div>
+      <div class="result-val">${val}</div>
+      ${label?`<div class="result-label">${label}</div>`:''}
+    </div>
+    <div class="result-body">
+      ${rowsHTML}
+      ${reko?`<div class="divline"></div><div class="reko">${reko}</div>`:''}
+    </div>
+  </div>`;
+}
+
+// NATRIUM
+function calcNa(){
+  const na=g('na-v'),bw=g('na-bw'),tgt=g('na-tgt'),tbwF=parseFloat(v('na-sex'));
+  const tbw=bw*tbwF;
+  const diff=tgt-na;
+  let cls,status,reko;
+  if(na<125){cls='bad';status='Hiponatremia Berat';}
+  else if(na<130){cls='bad';status='Hiponatremia Sedang';}
+  else if(na<135){cls='warn';status='Hiponatremia Ringan';}
+  else if(na>150){cls='bad';status='Hipernatremia Berat';}
+  else if(na>145){cls='warn';status='Hipernatremia';}
+  else{cls='ok';status='Normal';}
+  if(na<135){
+    const defisit=(diff*tbw).toFixed(1);
+    const max24h=(tbw*10).toFixed(1);
+    const rate=(tbw*10/24).toFixed(2);
+    reko=`<b>TBW</b> = ${tbw.toFixed(1)} L<br><b>Defisit Na</b> = ${defisit} mEq<br><b>Koreksi max 24 jam</b> = ${max24h} mEq<br><b>Kecepatan aman</b> ≤ ${rate} mEq/L/jam<br><br>Gunakan NaCl 3% (513 mEq/L) untuk hipo berat, atau NaCl 0.9% untuk ringan-sedang`;
+  } else if(na>145){
+    const wDef=(tbw*((na/140)-1)).toFixed(1);
+    reko=`<b>Defisit air bebas</b> = ${wDef} L<br>Koreksi max 0.5 mEq/L/jam atau 10–12 mEq/24 jam<br>Gunakan D5W atau NaCl 0.45%<br>Pantau Na setiap 2–4 jam`;
+  } else reko='Natrium dalam batas normal. Tidak ada koreksi diperlukan.';
+  show('r-na',cls,`${na.toFixed(1)} mEq/L`,'Natrium Serum',status,[],reko);
+}
+
+// KALIUM
+function calcK(){
+  const k=g('k-v');
+  let cls,status,reko;
+  if(k<2.5){cls='bad';status='Hipokalemia Berat';reko=`<b>Dosis:</b> 40 mEq KCl IV dalam 4 jam via CVC<br>Rate max via CVC: <b>20 mEq/jam</b><br>Monitor EKG kontinu<br>Ulangi cek K tiap 4 jam<br>Koreksi Mg jika hipomagnesemia menyertai`;}
+  else if(k<3.0){cls='bad';status='Hipokalemia Sedang';reko=`<b>Dosis:</b> 20–40 mEq KCl IV dalam 4 jam<br>Via CVC: 10–20 mEq/jam · Via perifer: ≤10 mEq/jam<br>Pantau EKG dan K tiap 4 jam`;}
+  else if(k<3.5){cls='warn';status='Hipokalemia Ringan';reko=`Suplementasi oral KCl 40–80 mEq/hari<br>Jika oral tidak memungkinkan: KCl IV 10–20 mEq dalam 2 jam`;}
+  else if(k>6.0){cls='bad';status='Hiperkalemia Berat – EMERGENSI';reko=`<b>1.</b> Ca glukonat 10% 10 mL IV bolus (stabilisasi membran)<br><b>2.</b> Insulin reguler 10 unit + D40% 2 flakon IV<br><b>3.</b> NaHCO3 50 mEq jika asidosis metabolik<br><b>4.</b> Kayexalate / Dialisis jika persisten<br><b>5.</b> Monitor EKG kontinu`;}
+  else if(k>5.5){cls='warn';status='Hiperkalemia Sedang';reko=`Batasi asupan K · Stop obat penyebab (ACEi/ARB/spiro)<br>Insulin 5–10 unit + D40%<br>Kayexalate jika persisten · Periksa EKG`;}
+  else if(k>5.0){cls='warn';status='Hiperkalemia Ringan';reko=`Pantau EKG · Batasi K diet<br>Cari penyebab: asidosis, hemolisis, gagal ginjal`;}
+  else{cls='ok';status='Normal';reko='Kalium dalam batas normal.';}
+  show('r-k',cls,`${k.toFixed(1)} mEq/L`,'Kalium Serum',status,[],reko);
+}
+
+// KALSIUM
+function calcCa(){
+  const ca=g('ca-v'),alb=g('ca-alb');
+  const caC=ca+0.8*(4-alb);
+  let cls,status,reko;
+  if(caC<7.5){cls='bad';status='Hipokalsemia Berat';reko=`<b>Ca glukonat 10%</b> 10–20 mL IV dalam 10 menit<br>Lanjut infus Ca glukonat 0.5–2 mg/kg/jam<br>Cek Mg, Fosfat, Vitamin D`;}
+  else if(caC<8.5){cls='warn';status='Hipokalsemia Ringan-Sedang';reko=`Ca glukonat 10% 10 mL IV dalam 30 menit<br>Evaluasi penyebab: hipoMg, hipofosfatemia, alkalosis`;}
+  else if(caC>12){cls='bad';status='Hiperkalsemia Berat';reko=`Hidrasi agresif NaCl 0.9% <b>200–300 mL/jam</b><br>Furosemid 40–80 mg IV setelah rehidrasi<br>Bifosfonat jika malignansi · Kalsitonin 4 IU/kg`;}
+  else if(caC>10.5){cls='warn';status='Hiperkalsemia Ringan';reko=`Hidrasi oral/IV · Batasi Ca diet<br>Cari penyebab: PTH, Vitamin D, keganasan`;}
+  else{cls='ok';status='Normal';reko='Kalsium terkoreksi dalam batas normal.';}
+  show('r-ca',cls,`${caC.toFixed(2)} mg/dL`,'Ca Terkoreksi Albumin',status,
+    [['Ca Total',`${g('ca-v')} mg/dL`],['Albumin',`${alb} g/dL`],['Koreksi',`+${(0.8*(4-alb)).toFixed(2)} mg/dL`]],reko);
+}
+
+// MAGNESIUM
+function calcMg(){
+  const mg=g('mg-v');
+  let cls,status,reko;
+  if(mg<1.0){cls='bad';status='Hipomagnesemia Berat';reko=`<b>MgSO4 4–8 g IV</b> dalam 4–6 jam<br>Pantau refleks patela dan laju napas<br>Antidotum: Ca glukonat 1 g IV`;}
+  else if(mg<1.7){cls='warn';status='Hipomagnesemia';reko=`MgSO4 2 g IV dalam 1 jam · Ulangi bila perlu<br>Oral: Mg 400–800 mg/hari jika toleransi baik`;}
+  else if(mg>3.0){cls='bad';status='Hipermagnesemia';reko=`Hentikan semua suplementasi Mg<br>Ca glukonat 10% 10–20 mL IV (antagonis)<br>Dialisis jika berat (>7 mg/dL) atau gagal ginjal`;}
+  else{cls='ok';status='Normal';reko='Magnesium dalam batas normal.';}
+  show('r-mg',cls,`${mg.toFixed(1)} mg/dL`,'Magnesium Serum',status,[],reko);
+}
+
+// FOSFAT
+function calcP(){
+  const p=g('p-v'),bw=g('p-bw');
+  const dose=(bw*0.64).toFixed(1);
+  let cls,status,reko;
+  if(p<1.0){cls='bad';status='Hipofosfatemia Berat';reko=`K/Na fosfat <b>0.32–0.64 mmol/kg IV</b> dalam 4–6 jam<br>Estimasi dosis: ${dose} mmol · Max rate: 7 mmol/jam<br>Pantau Ca, K, Na saat koreksi IV`;}
+  else if(p<2.5){cls='warn';status='Hipofosfatemia';reko=`Oral: Na/K fosfat 1.5–2.5 g/hari dalam dosis terbagi<br>IV jika oral tidak memungkinkan: 0.16–0.32 mmol/kg`;}
+  else if(p>5.5){cls='bad';status='Hiperfosfatemia';reko=`Batasi fosfat diet<br>Fosfat binder: Ca karbonat atau sevelamer<br>Dialisis jika GGK berat`;}
+  else{cls='ok';status='Normal';reko='Fosfat dalam batas normal.';}
+  show('r-p',cls,`${p.toFixed(1)} mg/dL`,'Fosfat Serum',status,[],reko);
+}
+
+// AGD
+function calcAGD(){
+  const ph=g('ph'),pco2=g('pco2'),hco3=g('hco3');
+  const na=g('agd-na'),cl=g('agd-cl'),alb=g('agd-alb');
+  const ag=na-cl-hco3;
+  const agC=ag+2.5*(4-alb);
+  let dis,cls;
+  if(ph<7.35&&pco2>45&&hco3>26){dis='Asidosis Respiratorik Terkompensasi';cls='warn';}
+  else if(ph<7.35&&pco2>45){dis='Asidosis Respiratorik Akut';cls='bad';}
+  else if(ph<7.35&&hco3<22){dis='Asidosis Metabolik';cls='bad';}
+  else if(ph>7.45&&pco2<35&&hco3<22){dis='Alkalosis Respiratorik Terkompensasi';cls='warn';}
+  else if(ph>7.45&&pco2<35){dis='Alkalosis Respiratorik Akut';cls='warn';}
+  else if(ph>7.45&&hco3>26){dis='Alkalosis Metabolik';cls='warn';}
+  else{dis='Normal / Terkompensasi Penuh';cls='ok';}
+  let agReko=agC>12?`<b>AG Tinggi</b> – MUDPILES:<br>Metanol, Uremia, DKA, Propilen glikol, INH, Laktat, Etilen glikol, Salisilat`:`AG Normal – asidosis AG normal (hiperkloremia/diare/RTA) jika pH rendah`;
+  let bicarb='';
+  if(hco3<22&&ph<7.35) bicarb=`<br><br><b>Dosis NaHCO3</b> = 0.3 × BB × (18 − HCO3 aktual)<br>Pertimbangkan koreksi jika pH &lt;7.1`;
+  show('r-agd',cls,dis,'Interpretasi AGD',`pH ${ph} · PaCO2 ${pco2} · HCO3 ${hco3}`,
+    [['AG standar',`${ag.toFixed(1)} mEq/L (normal 8–12)`,ag>12?'danger':'ok'],['AG terkoreksi',`${agC.toFixed(1)} mEq/L`,agC>12?'danger':'ok']],
+    agReko+bicarb);
+}
+
+// Hb
+function calcHb(){
+  const hb=g('hb-v'),tgt=g('hb-tgt'),bw=g('hb-bw'),cond=parseInt(v('hb-cond'));
+  const mL=(tgt-hb)*bw*3;
+  const kntg=Math.ceil(mL/250);
+  const thresh=[7,8,7][cond];
+  const cls=hb<thresh?'bad':hb<9?'warn':'ok';
+  const indikasi=hb<thresh?`Indikasi transfusi ada (Hb < ${thresh} g/dL)`:`Belum ada indikasi transfusi segera`;
+  const reko=mL>0?`<b>Volume PRC:</b> ${mL.toFixed(0)} mL<br><b>Kantong PRC (250 mL):</b> ${kntg} kantong<br><br>Berikan 1 unit, re-evaluasi Hb sebelum lanjut.<br>Pantau tanda volume overload pada pasien jantung.`:'Hb sudah memenuhi target, tidak perlu transfusi.';
+  show('r-hb',cls,`${hb.toFixed(1)} g/dL`,'Hemoglobin',indikasi,
+    [['Hb target',`${tgt} g/dL`],['Threshold kondisi ini',`${thresh} g/dL`]],reko);
+}
+
+// PLT
+function calcPlt(){
+  const plt=g('plt-v'),cond=parseInt(v('plt-cond'));
+  const thresh=[20,50,50,10][cond];
+  const cls=plt<thresh?'bad':plt<50?'warn':'ok';
+  const status=plt<thresh?`Indikasi transfusi trombosit (< ${thresh})`:`Belum ada indikasi transfusi trombosit`;
+  show('r-plt',cls,`${plt} × 10³/µL`,'Trombosit',status,
+    [['Threshold kondisi ini',`${thresh} × 10³/µL`,plt<thresh?'danger':'ok'],['Threshold spontan bleed','10 × 10³/µL'],['Threshold pra-operasi','50 × 10³/µL']],
+    plt<thresh?'1 pool trombosit (5–6 unit) ≈ naik 30–60 × 10³/µL pada dewasa. Cek CCI 1 jam post-transfusi.':'Tidak ada tindakan transfusi trombosit segera.');
+}
+
+// Koagulasi
+function calcKoag(){
+  const inr=g('inr'),aptt=g('aptt'),fib=g('fib'),cond=parseInt(v('koag-cond'));
+  let reko=[],cls='ok';
+  if(inr>2&&cond===0){reko.push('<b>FFP 10–15 mL/kg IV</b> – INR >2 dengan perdarahan aktif');cls='bad';}
+  else if(inr>1.5&&cond===1){reko.push('FFP 10 mL/kg atau PCC jika tersedia – pra-prosedur INR >1.5');cls='warn';}
+  if(aptt>60&&cond===0){reko.push('aPTT memanjang + perdarahan: FFP, evaluasi faktor spesifik (VIII/IX)');if(cls!='bad')cls='warn';}
+  if(fib<150&&cond===0){reko.push('<b>Kriopresipitat 10 unit IV</b> – Fibrinogen <150 dengan perdarahan (naik Fb ~50 mg/dL)');cls='bad';}
+  if(fib<100){reko.push('<b>URGENT: Kriopresipitat</b> – Fibrinogen kritis <100 mg/dL');cls='bad';}
+  if(reko.length===0) reko.push('Tidak ada indikasi koreksi koagulopati segera.');
+  show('r-koag',cls,'Evaluasi Koagulasi','',`INR ${inr} · aPTT ${aptt} · Fib ${fib}`,
+    [['PT/INR',`${inr.toFixed(1)} (normal <1.2)`,inr>1.5?'danger':'ok'],
+     ['aPTT',`${aptt} detik (normal 25–35)`,aptt>45?'warn':'ok'],
+     ['Fibrinogen',`${fib} mg/dL (normal 200–400)`,fib<150?'danger':'ok']],
+    reko.join('<br>'));
+}
+
+// GFR
+function calcGFR(){
+  const cr=g('cr'),age=g('cr-age'),bw=g('cr-bw'),bun=g('bun'),uo=g('uo');
+  const sexF=v('cr-sex')==='female'?0.742:1;
+  const gfr=(140-age)*bw/(72*cr)*sexF;
+  const bunCr=bun/cr;
+  let cls,status;
+  if(gfr<15){cls='bad';status='GFR <15 – Gagal Ginjal (G5)';}
+  else if(gfr<30){cls='bad';status='GFR 15–29 – GGK Berat (G4)';}
+  else if(gfr<60){cls='warn';status='GFR 30–59 – GGK Sedang (G3)';}
+  else if(gfr<90){cls='warn';status='GFR 60–89 – Mildly Decreased (G2)';}
+  else{cls='ok';status='GFR ≥90 – Normal (G1)';}
+  const uoStatus=uo<500?'Oliguria – evaluasi AKI':uo<800?'Output rendah – pantau ketat':'Output cukup';
+  const bunInterp=bunCr>20?'Pre-renal (dehidrasi/hipovolemia)':'Renal/Post-renal';
+  const adjDose=gfr<30?'<b>Ya – sesuaikan dosis obat (konsultasi farmasi)</b>':'Evaluasi tiap obat individual';
+  show('r-gfr',cls,`${gfr.toFixed(1)} mL/min`,'eGFR Cockcroft-Gault',status,
+    [['BUN/Kreatinin',`${bunCr.toFixed(1)} – ${bunInterp}`,bunCr>20?'warn':'ok'],
+     ['Urin Output/24 jam',`${uo} mL – ${uoStatus}`,uo<500?'danger':uo<800?'warn':'ok'],
+     ['Penyesuaian dosis',gfr<30?'Diperlukan':'Evaluasi individual',gfr<30?'warn':'ok']],
+    adjDose);
+}
+
+// GD
+function calcGD(){
+  const gd=g('gd'),bw=g('gd-bw'),prot=parseInt(v('gd-prot'));
+  const targets=[[140,180],[110,180],[140,180]];
+  const[lo,hi]=targets[prot];
+  let cls,status,reko;
+  if(gd<70){cls='bad';status='Hipoglikemia Berat – TINDAKAN SEGERA';reko=`<b>STOP insulin segera!</b><br>D40% 1–2 flakon (20–40 mL) IV bolus<br>Ulangi cek GD 15 menit<br>Target >100 mg/dL sebelum lanjut insulin`;}
+  else if(gd<100){cls='warn';status='Hipoglikemia Ringan';reko=`Kurangi/stop insulin<br>D40% 1 flakon IV · Pantau GD 30 menit`;}
+  else if(gd>hi){
+    cls=gd>300?'bad':'warn';
+    const dose=Math.round((gd-100)/50);
+    status=`Hiperglikemia (>${hi} mg/dL)`;
+    reko=`<b>Insulin reguler (sliding scale):</b> ≈ ${dose}–${dose+2} unit IV bolus<br><b>Infus insulin:</b> 0.02–0.05 unit/kg/jam = ${(bw*0.03).toFixed(1)}–${(bw*0.05).toFixed(1)} unit/jam<br>Pantau GD tiap 1–2 jam saat titrasi`;
+    if(gd>300)reko+=`<br><br>GD >300: evaluasi DKA/HHS (AGD, keton urin, osmolalitas)`;
+  } else{cls='ok';status=`Dalam Target (${lo}–${hi} mg/dL)`;reko=`Pertahankan protokol insulin saat ini.<br>Cek GD setiap 2–4 jam.`;}
+  show('r-gd',cls,`${gd} mg/dL`,'Gula Darah',status,[['Target protokol',`${lo}–${hi} mg/dL`]],reko);
+}
+
+// AG
+function calcAG(){
+  const na=g('ag-na'),cl=g('ag-cl'),hco3=g('ag-hco3'),alb=g('ag-alb');
+  const ag=na-cl-hco3;
+  const agC=ag+2.5*(4-alb);
+  const cls=agC>12?'warn':'ok';
+  const status=agC>12?'Anion Gap Meningkat':'Anion Gap Normal';
+  const reko=agC>12?`<b>MUDPILES:</b><br>Metanol · Uremia · DKA · Propilen glikol · INH · Laktat · Etilen glikol · Salisilat`:
+    `AG normal.<br>Jika asidosis metabolik: kemungkinan hiperkloremia, diare, atau RTA.`;
+  show('r-ag',cls,`${agC.toFixed(1)} mEq/L`,'AG Terkoreksi Albumin',status,
+    [['AG standar (Na−Cl−HCO3)',`${ag.toFixed(1)} mEq/L`,ag>12?'warn':'ok'],
+     ['Koreksi albumin',`+${(2.5*(4-alb)).toFixed(1)} mEq/L`]],reko);
+}
+
+// SERVICE WORKER
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
